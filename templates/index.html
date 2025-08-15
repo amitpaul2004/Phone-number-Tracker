@@ -56,16 +56,31 @@
 
 <script>
 let map;
+let streetLayer, satelliteLayer;
 
 function initMap(lat, lon) {
     if (!map) {
         map = L.map('map').setView([lat, lon], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+        // Street view layer (OpenStreetMap)
+        streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Satellite view layer (Esri World Imagery)
+        satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        });
+
+        // Layer control
+        L.control.layers({
+            "Street View": streetLayer,
+            "Satellite View": satelliteLayer
         }).addTo(map);
     } else {
         map.setView([lat, lon], 5);
     }
+
     L.marker([lat, lon]).addTo(map);
 }
 
