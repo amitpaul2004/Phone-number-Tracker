@@ -15,9 +15,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px;
         }
         .tracker-card {
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
             background: #fff;
             border-radius: 15px;
@@ -25,9 +26,24 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.2);
         }
         #map {
-            height: 250px;
+            height: 300px;
             border-radius: 10px;
             margin-top: 15px;
+        }
+        .detail-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        .detail-icon {
+            width: 28px;
+            text-align: center;
+            margin-right: 8px;
+            font-size: 18px;
         }
     </style>
 </head>
@@ -60,25 +76,25 @@ let streetLayer, satelliteLayer;
 
 function initMap(lat, lon) {
     if (!map) {
-        map = L.map('map').setView([lat, lon], 5);
+        map = L.map('map').setView([lat, lon], 6);
 
-        // Street view layer (OpenStreetMap)
         streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Satellite view layer (Esri World Imagery)
         satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles © Esri'
         });
 
-        // Layer control
         L.control.layers({
             "Street View": streetLayer,
             "Satellite View": satelliteLayer
         }).addTo(map);
     } else {
-        map.setView([lat, lon], 5);
+        map.setView([lat, lon], 6);
+        map.eachLayer(layer => {
+            if (layer instanceof L.Marker) map.removeLayer(layer);
+        });
     }
 
     L.marker([lat, lon]).addTo(map);
@@ -97,21 +113,24 @@ function trackNumber() {
     .then(res => res.json())
     .then(data => {
         if (data.status === "success") {
+            const lat = data.latitude || 20; // default
+            const lon = data.longitude || 0;
+
+            const timeNow = new Date().toLocaleString("en-US", { timeZone: data.timezones[0] || "UTC" });
+
             resultDiv.innerHTML = `
-                <h5>📊 Results</h5>
-                <p><strong>🌍 Country:</strong> ${data.country}</p>
-                <p><strong>📡 Carrier:</strong> ${data.carrier}</p>
-                <p><strong>⏰ Timezones:</strong> ${data.timezones.join(", ")}</p>
+                <h5 class="mb-3">📊 Phone Details</h5>
+                <div class="detail-item"><span class="detail-icon">📞</span> <strong>Number:</strong> ${data.number}</div>
+                <div class="detail-item"><span class="detail-icon">🌍</span> <strong>Country:</strong> ${data.country} (${data.country_code})</div>
+                <div class="detail-item"><span class="detail-icon">📡</span> <strong>Carrier:</strong> ${data.carrier}</div>
+                <div class="detail-item"><span class="detail-icon">🗺️</span> <strong>Region:</strong> ${data.region || "Unknown"}</div>
+                <div class="detail-item"><span class="detail-icon">🏙️</span> <strong>City:</strong> ${data.city || "Unknown"}</div>
+                <div class="detail-item"><span class="detail-icon">⏰</span> <strong>Timezones:</strong> ${data.timezones.join(", ")}</div>
+                <div class="detail-item"><span class="detail-icon">📍</span> <strong>Coordinates:</strong> ${lat}, ${lon}</div>
+                <div class="detail-item"><span class="detail-icon">🗓️</span> <strong>Local Time:</strong> ${timeNow}</div>
             `;
 
-            // Get coordinates from OpenStreetMap Nominatim
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(data.country)}`)
-                .then(res => res.json())
-                .then(locations => {
-                    if (locations.length > 0) {
-                        initMap(locations[0].lat, locations[0].lon);
-                    }
-                });
+            initMap(lat, lon);
         } else {
             resultDiv.innerHTML = `<p class="text-danger">❌ ${data.message}</p>`;
         }
